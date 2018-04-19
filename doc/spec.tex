@@ -1,0 +1,245 @@
+\documentclass{article}
+\usepackage{a4wide}
+\usepackage{url}
+\usepackage{hyperref}
+
+\oddsidemargin -9mm
+\evensidemargin -9mm
+\textwidth 180mm
+\textheight 240mm
+\topmargin -20mm
+\raggedright
+
+
+\title{}
+\date{}
+
+\begin{document}
+
+{\Large \bf
+\begin{center}
+MELBOURNE BUSINESS SCHOOL
+(The University of Melbourne)
+
+MBUSA90500 Programming, Module 2 2018
+ 
+Assignment
+
+Final submission before 9am 1 May 2018.
+
+\end{center}
+}
+\section{Updates}
+
+\begin{itemize}
+    \item 18 April. The matrix begins with a row of zeros, so will have 21 rows at the end of the game.
+    \item 18 April. Added {\tt "same\_col"} key to TEST dictionary
+\end{itemize}
+ 
+\section{Objectives}
+
+This project is designed to give your syndicate experience in 
+software engineering,
+Python programming and get you thinking about data.
+In particular, you should experience the following.
+\begin{itemize}
+    \item Python programming - every member of the syndicate must contribute code to the
+          final solution.
+    \item Software design - the process of breaking a task into modules and assigning 
+          each module to a programmer in such a way that the pieces can be easily
+          assembled.
+    \item Software testing - each module should be tested prior to integration, and then
+          the whole tested once integrated.
+\end{itemize}
+
+
+
+\section{Analytica Melburnia}
+
+You are to write a virtual player for a two player game: Analytica Melburnia. 
+You will submit your player to a tournament server and it will play you against the other syndicates.
+
+The rules of the game are as follows.
+\begin{enumerate}
+    \item The game begins with a matrix of 5 columns and one row containing 5 zeros.
+          Each column has a name that is randomly
+          generated at the beginning of each game.
+    \item Each game has 10 turns.
+    \item At the beginning of each turn, both players chose 5 floating point numbers in the range $[-1023, 1023]$
+          to add a row of the matrix.
+    \item After the 10 turns, the matrix will have 20 rows.
+    \item At the start of the game, each player is given a victory condition and a column name 
+          that is only known to that player. See the list of victory conditions below.
+    \item The winner of the game is the player that
+has met their victory condition. If both or neither players have met their
+condition, then the game is a draw.
+\end{enumerate}
+
+\subsection*{Victory Conditions}
+\begin{description}
+    \item[Max] The player's column must contain the unique maximum number in the matrix.
+    \item[Min] The player's column must contain the unique minimum number in the matrix.
+    \item[Linear] The player's column must have a statistically significant ($p < 0.05$) 
+                  Pearson Correlation r of at least 0.9 when correlated with {\tt range(20)}.
+    \item[Quadratic] The player's column squared must have a statistically significant ($p < 0.05$) 
+                  Pearson Correlation r of at least 0.9 when correlated with {\tt range(20)}.
+    \item[ZeroM] The player's column should have a mean whose absolute value is less than 0.000001.
+    \item[SumNeg] The player's column should sum to less than zero.
+    \item[SumPos] The player's column should sum to more than zero.
+\end{description}
+
+
+
+\section{Your player}
+
+Your player must be Python3 code that defines a class called {\tt Player}
+that contains a method called {\tt take\_turn}
+which takes two parameters: the matrix so far in the form of a dictionary, and the victory condition as a tuple.
+
+\begin{verbatim}
+class Player:
+    """Minimal player."""
+    def take_turn(self, data, victory):
+        """Must return a dictionary with the same keys as data, and with single float values 
+           in the range [-1023, 1023].
+           data is a dictionary with column names as keys and a list of floats 
+                   as the column values of the game so far.
+           victory the condition you should try and achieve and is a tuple (a,b) where 
+                a is victory condition (string) 
+                b is a column name (string - one of data.keys()).
+        """
+        return {k:1.0 for k in data}
+\end{verbatim}
+
+Your class can contain anything else you like, just as long as {\tt take\_turn} 
+exists in the correct format.
+You might like a {\tt \_\_repr\_\_} function.
+There is no way to pass arguments to the constructor of your Player object in this tournament, so you 
+should not define an {\tt \_\_init\_\_} function.
+
+
+\section{Submitting to the tournament}
+
+The tournament will run as a server expecting you to send commands
+to add and delete players as JSON objects. You can ADD (and DEL) as many players as you
+like to the tournament, so a syndicate could have multiple players in the tournament at
+any one time.
+
+The server is located at IP address 128.250.106.25 and port 5002.
+
+You should use the following code (or similar) to send your JSON object to the server.
+
+\begin{verbatim}
+def send_to_server(js):
+    """Open socket and send the json string js to server with EOM appended, and wait 
+       for \n terminated reply.
+       js - json object to send to server
+    """
+    clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    clientsocket.connect(('128.250.106.25', 5002))
+
+    clientsocket.send("""{}EOM""".format(js).encode('utf-8'))
+
+    data = ''
+    while data == '' or data[-1] != "\n":
+        data += clientsocket.recv(1024).decode('utf-8')
+    print(data)
+
+    clientsocket.close()
+\end{verbatim}
+
+The JSON object you send should contain four key:value pairs as follows.
+\begin{itemize}
+\item Key {\tt "cmd"} which has the value of either {\tt "ADD"}, {\tt "DEL"} or {\tt "TEST"}.
+\item Key {\tt "syn"} which has the value of your syndicate number.
+\item Key {\tt "name"} which has the value of a team name for the leader board.
+\item Key {\tt "data"} which has the value of string that is your python code.
+\end{itemize}
+If you use the {\tt "TEST"} command, you should also include the key:value pairs as follows.
+\begin{itemize}
+\item Key {\tt "data2"} which has the value of python code for the second player.
+\item Key {\tt "vt1"} which has the value of the victory condition for player 1.
+\item Key {\tt "vt2"} which has the value of the victory condition for player 2.
+\item Key {\tt "same\_col"} which has the value of {\tt True} to force both players to use the same column. 
+                            If {\tt False} will randomly choose columns.
+\end{itemize}
+
+Please delete your old players otherwise the system might grind to a halt.
+
+You can view the leader board and get info about your player at 
+\url{http://codemasters.eng.unimelb.edu.au/lb.html}
+
+TEST is always between two players you provide.
+An example TEST could be as follows.
+\begin{verbatim}
+p = "class Player:\n def take_turn(self, data, victory): return {k:1.1 for k in data}"
+
+p2 = "class Player:\n def take_turn(self, data, victory): return {k:-1.1 for k in data}"
+
+send_to_server(json.dumps({"cmd":"TEST", "syn":4, "name":"T4", "data":p, 
+                           "data2":p2, "vt1":"SumPos", "vt2":"SumNeg", "same_col":True}))
+\end{verbatim}
+
+\section{Assessment}
+
+\subsection{Within-syndicate responsibilities}
+
+It is expected that you will structure the Python code so that it is
+split into modules/functions, and different members of the syndicate
+will write different parts of the code.
+Naturally you can collaborate, but it is in the best interests of the weak
+coders that they be given a coding task to complete.
+The temptation for the strong coders to do the lot is high, but there
+will be coding questions about this assignment on the exam that each
+individual must answer.
+I suggest the strong coders concentrate on the design, and splitting
+the tasks up amongst the syndicate, aiming to allot the tasks
+based on syndicate member's abilities.
+
+\subsection{Submission}
+
+The highest ranked player on the server from each syndicate as at
+1 May 9am will be assessed.  I will get the code from the server,
+and run it through a beautifier to format it and get a single file
+of Python.  Please include comments, etc in your submission, and
+feel free to include large comments on your approach to defeating
+other players, and other strategic points, within the code.
+
+
+\subsection{Marking Rubric for a Syndicate}
+
+\renewcommand{\arraystretch}{2}
+
+\begin{tabular}{|l|l|r|}
+\hline
+Component & Property & Mark \\
+\hline
+Submissions to server (socket + JSON)
+            & At least one working player added &  /3 \\
+(5 marks)   & Several players added and deleted &  /2 \\
+\hline
+Approach to trying to meet own victory conditions
+            & Min, Max, SumPos, SumNeg, ZeroM &  /3\\
+(6 marks)   & Linear, Quadratic               & /3\\
+\hline
+Approach to trying to defeat other's victory conditions
+            & Min, Max              &  /1\\
+(8 marks)   & SumPos, SumNeg, ZeroM &  /3\\
+            & Linear, Quadratic     &  /4\\
+\hline
+Final position in tournament (3 marks) &  & /3\\
+    $3 - \lfloor \mbox{\emph{position}}/4\rfloor$ & & \\
+\hline
+Code readability 
+            & Variable names                       & /2\\
+ (13 marks) & Major comments (eg functions)        & /5\\
+            & Minor/in-line comments when required & /2\\
+            & Modular design, no repeated code     & /4\\
+\hline
+ \multicolumn{2}{r}{Total}  & \multicolumn{1}{p{2cm}}{\hfill /35} \\
+\end{tabular}
+
+
+\vfill
+AHT \today
+\end{document}
