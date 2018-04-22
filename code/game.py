@@ -49,7 +49,7 @@ class Game:
             self.vic_types.append(Game.victory_types[vic_type2])
 
         if same_col:
-            c = random.sample(self.col_names, k=1)
+            c = random.sample(self.col_names, k=1)[0]
             self.vic_cols = [c,c]
         else:
             self.vic_cols = random.sample(self.col_names, k=2)

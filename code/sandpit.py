@@ -72,7 +72,7 @@ def do_test(data, conn):
 
     vt1 = Game.victory_types.index(data["vt1"])
     vt2 = Game.victory_types.index(data["vt2"])
-    g = Game(vic_type1=vt1, vic_type2=vt2)
+    g = Game(vic_type1=vt1, vic_type2=vt2, same_col=same_col)
 
     p1_module = imp.new_module('p1_module')
     p2_module = imp.new_module('p2_module')
@@ -85,6 +85,35 @@ def do_test(data, conn):
     else:
         conn.send("SUCCESS {}\n".format(json.dumps(result)).encode('utf-8'))
 
+def add_player(d):
+    """Return message for server. 
+        d - dictionary with "data" "syn" and "name"
+    """
+    try:
+        if int(d["syn"]) not in range(13):
+            return("ERR: data['syn'] not in range [1,12]\n".encode('utf-8'))
+        if "data" not in d:
+            return("ERR: data does not have key 'data'\n".encode('utf-8'))
+    except KeyError:
+        return("ERR: data does not have key 'syn'\n".encode('utf-8'))
+    except ValueError:
+        return("ERR: data['syn'] is not an integer\n".encode('utf-8'))
+
+    players_lock.acquire()
+    if "name" not in d:
+        d["name"] = d["syn"]
+    players.append((d["name"], d["syn"], d["data"], 0, 0)) 
+    players_lock.release()
+
+    fname = "{}/{}_{}.py".format(SDIR, d["name"], d["syn"])
+    with open(fname, "w") as f:
+        f.write(d["data"])
+    try:
+        yapf.FormatFiles([fname], [(1,100000)], in_place=True)  # assumes no more than 100000 lines of code
+    except Exception:
+        print("Cannot yapf {}\n".format(fname)) 
+
+    return("SUCCESS\n".encode('utf-8'))
 
 def clientthread(conn):
     """Loop reading the code then close.
@@ -103,19 +132,8 @@ def clientthread(conn):
             if d["cmd"] == "PING":
                 conn.send("SUCCESS\n".encode('utf-8'))
             elif d["cmd"] == "ADD":
-                if "syn" not in d or "data" not in d:
-                    conn.send("ERR: Missing syn or data in {} \n".format(data).encode('utf-8'))
-                else:
-                    players_lock.acquire()
-                    if "name" not in d:
-                        d["name"] = d["syn"]
-                    players.append((d["name"], d["syn"], d["data"], 0, 0)) 
-                    fname = "{}/{}_{}.py".format(SDIR, d["name"], d["syn"])
-                    with open(fname, "w") as f:
-                        f.write(d["data"])
-                    yapf.FormatFiles([fname], [(1,100000)], in_place=True)
-                    conn.send("SUCCESS\n".encode('utf-8'))
-                players_lock.release()
+                msg = add_player(d)
+                conn.send(msg)
             elif d["cmd"] == "DEL":
                 if "name" not in d:
                     conn.send("ERR: Missing name in {} \n".format(data).encode('utf-8'))
@@ -241,13 +259,14 @@ def print_leader_board(score_board):
     keys = [x for _,x in sorted(zip(wins,keys), reverse=True)]
 
     s = ["<html>\n<body>\n<h3>BUSA90500 Programming Assignment</h3>"]
+    s = ["<p>Games played: {}".format(sum(wins))]
     s += ['<table style="text-align:center">'] 
 
     n = len(Game.victory_types)
     for k in keys:
         s += ['<tr><td style="border-bottom:1px solid black" colspan="100%"></td></tr>']
 
-        s += ['<tr><td colspan="15" style="text-align:left">{:>16}{:2}</td></tr>'.format(k[0], k[1])]
+        s += ['<tr><td colspan="15" style="text-align:left">{:>16} ({:1})</td></tr>'.format(k[0], k[1])]
         s += ['<tr><td></td>']
         s += ['<td style="border-bottom:1px solid black" colspan="{}">Wins</td><td></td>'.format(len(Game.victory_types))]
         s += ['<td style="border-bottom:1px solid black" colspan="{}">Draws</td><td></td>'.format(len(Game.victory_types))]
@@ -324,7 +343,12 @@ def run_games():
                 print("Exception when trying to run a game")
                 print(msg)
        
-        time.sleep(3)
+        try:
+            players_lock.release()
+        except Exception:
+            pass
+
+        time.sleep(0.3)
 
 def start_server():
         # open the socket
@@ -340,8 +364,17 @@ def start_server():
     start_new_thread(run_games, ())
     
         # load any existing players
-    print(os.listdir()) 
+    for file in os.listdir(SDIR):
+        name = file[:-3]   # remove '.py'
+        i = name.rfind('_')
+        syn = name[i+1 : ]
+        name = name[ : i]
 
+        with open("{}/{}".format(SDIR,file)) as f:
+            d = {'name':name, 'syn':syn, 'data':f.read()}
+            msg = add_player(d)
+            print(msg)
+        
         # loop listening for connections.
     while True:
         conn, addr = s.accept()
