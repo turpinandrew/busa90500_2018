@@ -113,6 +113,7 @@ def add_player(d):
     except Exception:
         print("Cannot yapf {}\n".format(fname)) 
 
+    print("ADDED {}{}".format(d["syn"], d["name"]))
     return("SUCCESS\n".encode('utf-8'))
 
 def clientthread(conn):
@@ -150,6 +151,7 @@ def clientthread(conn):
                             conn.send("ERR: couldn't delete file\n".encode('utf-8'))
                         else:
                             conn.send("SUCCESS\n".encode('utf-8'))
+                            print('DELETED {} {}'.format(d["name"], d["syn"]))
                     else:
                         conn.send("ERR: name {} doesn't exist\n".format(data).encode('utf-8'))
                     players_lock.release()
@@ -198,6 +200,7 @@ def choose_game(score_board):
     """
     if len(players) < 2:
         return (None, None, None, None)
+    """
     k1 = (players[0][PLAYER_TUPLE_NAME], players[0][PLAYER_TUPLE_SYN])
     k2 = (players[1][PLAYER_TUPLE_NAME], players[1][PLAYER_TUPLE_SYN])
     min_num_games = sum([score_board[k1][k2][i][0][0] for i in [0,1,2]])
@@ -212,7 +215,15 @@ def choose_game(score_board):
                             min_num_games = s
                             min_keys = (k1, k2, index1, index2)
     return min_keys
-        
+    """
+    p1 = random.randint(0, len(players)-1)
+    p2 = random.randint(0, len(players)-1)
+    v1 = random.randint(0, len(Game.victory_types)-1)
+    v2 = random.randint(0, len(Game.victory_types)-1)
+    k1 = (players[p1][PLAYER_TUPLE_NAME], players[p1][PLAYER_TUPLE_SYN])
+    k2 = (players[p2][PLAYER_TUPLE_NAME], players[p2][PLAYER_TUPLE_SYN])
+    return (k1, k2, v1, v2)
+
 def print_score_board(score_board):
     """Pretty cross table of round robin in order of total wins.
        @param score_board is dict of dict of [[win],[losses],[draw]]
@@ -255,18 +266,23 @@ def print_leader_board(score_board):
               primary key (name, syn) 
     """
     keys = score_board.keys()
-    wins = [sum((sum((sum(i) for i in wld[0])) for _,wld in score_board[k].items())) for k in keys]
-    keys = [x for _,x in sorted(zip(wins,keys), reverse=True)]
+    wins = {k:sum((sum((sum(i) for i in wld[0])) for _,wld in score_board[k].items())) for k in keys}
+    loss = {k:sum((sum((sum(i) for i in wld[1])) for _,wld in score_board[k].items())) for k in keys}
+    for k in loss:
+        if loss[k] == 0:
+            loss[k] = 0.1
+    wl = { k:(wins[k] / loss[k]) for k in keys }
+    keys = [k for _,k in sorted([(v,k) for k,v in wl.items()], reverse=True)]
 
     s = ["<html>\n<body>\n<h3>BUSA90500 Programming Assignment</h3>"]
-    s = ["<p>Games played: {}".format(sum(wins))]
+    s = ["<p>Games played: {}".format(sum(wins.values()))]
     s += ['<table style="text-align:center">'] 
 
     n = len(Game.victory_types)
     for k in keys:
         s += ['<tr><td style="border-bottom:1px solid black" colspan="100%"></td></tr>']
 
-        s += ['<tr><td colspan="15" style="text-align:left">{:>16} ({:1})</td></tr>'.format(k[0], k[1])]
+        s += ['<tr><td colspan="15" style="text-align:left">{:>16} ({:1}) win-loss-ratio={}</td></tr>'.format(k[0], k[1], wl[k])]
         s += ['<tr><td></td>']
         s += ['<td style="border-bottom:1px solid black" colspan="{}">Wins</td><td></td>'.format(len(Game.victory_types))]
         s += ['<td style="border-bottom:1px solid black" colspan="{}">Draws</td><td></td>'.format(len(Game.victory_types))]

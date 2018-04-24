@@ -7,6 +7,7 @@
 import random
 from scipy import stats 
 import numpy as np
+from collections import defaultdict
 
 class Game:
     names = [ "Amy", "Andrew", "Angela", "Bernie", "Biying", "Bushra",
@@ -60,14 +61,28 @@ class Game:
            player_index : 0 or 1 for p1 or p2 to index self.vic_types and self.vic_cols.
         """
         if self.vic_types[player_index] == "Max":
-            most = max([max(v) for v in data.values()])
-            maxes = [k for k,v in data.items() if max(v) == most]
-
+            maxes = defaultdict(int)  # count frequency of values
+            for k in data:
+                for v in data[k]:
+                    maxes[v] += 1
+            most = -1024
+            for v in sorted(maxes.keys(), reverse=True): # find max unique
+                if maxes[v] == 1:
+                    most = v
+                    break
+            maxes = [k for k,v in data.items() if most in v]
             return len(maxes) == 1 and self.vic_cols[player_index] == maxes[0]
         elif self.vic_types[player_index] == "Min":
-            least = min([min(v) for v in data.values()])
-            mins = [k for k,v in data.items() if min(v) == least]
-
+            mins = defaultdict(int)  # count frequency of values
+            for k in data:
+                for v in data[k]:
+                    mins[v] += 1
+            least = 1024
+            for v in sorted(mins.keys()): # find min unique
+                if mins[v] == 1:
+                    least = v
+                    break
+            mins = [k for k,v in data.items() if least in v]
             return len(mins) == 1 and self.vic_cols[player_index] == mins[0]
         elif self.vic_types[player_index] == "Linear":
             ys = data[self.vic_cols[player_index]]
@@ -93,8 +108,8 @@ class Game:
         """
         message = ""
         could_win = [True, True]  # can each player win?
-        data = {k:[0] for k in self.col_names}
-        for round in range(self.num_rounds):
+        data = {k:[0.0] for k in self.col_names}
+        for rnd in range(self.num_rounds):
             p1_row = p1.take_turn(data, (self.vic_types[0], self.vic_cols[0]))
             p2_row = p2.take_turn(data, (self.vic_types[1], self.vic_cols[1]))
 
@@ -105,7 +120,7 @@ class Game:
                         could_win[p] = False
                         message += "Player {} returned a row that was not valid.\n".format(p+1)
                     else:
-                        data[k].append(row[k])
+                        data[k].append(round(row[k],5))
 
         if message == '':
             message = 'gg\n'
