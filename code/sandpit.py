@@ -228,7 +228,7 @@ def choose_game(score_board):
     min_keys = (k1, k2, 0, 0)
     for k1 in score_board:
         for k2 in score_board:
-            if k1 != k2:
+            if k1 != k2 and k1[1] != k2[1] :
                 for index1 in range(len(Game.victory_types)):
                     for index2 in range(len(Game.victory_types)):
                         s = sum(wld[index1][index2] for wld in score_board[k1][k2])
