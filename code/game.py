@@ -105,13 +105,23 @@ class Game:
     def run_game(self, p1, p2):
         """Run a game of p1 vs p2.
            Return lots of stuff... 0 for draw, or 1 or 2 for winner.
+
+           If one of the player's take_turn fails, return tuple of
+           (player number, exception message)  (not list of 5 things)
         """
         message = ""
         could_win = [True, True]  # can each player win?
         data = {k:[0.0] for k in self.col_names}
         for rnd in range(self.num_rounds):
-            p1_row = p1.take_turn(data, (self.vic_types[0], self.vic_cols[0]))
-            p2_row = p2.take_turn(data, (self.vic_types[1], self.vic_cols[1]))
+            try:
+                p1_row = p1.take_turn(data, (self.vic_types[0], self.vic_cols[0]))
+            except Exception as msg:
+                return (1, msg)
+
+            try:
+                p2_row = p2.take_turn(data, (self.vic_types[1], self.vic_cols[1]))
+            except Exception as msg:
+                return (2, msg)
 
                 # append each row, looking for missing key or non-float value
             for p,row in [(0, p1_row), (1, p2_row)]:

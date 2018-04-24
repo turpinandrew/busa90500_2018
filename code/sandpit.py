@@ -31,7 +31,6 @@ import yapf
 import os
  
 #HOST = 'localhost'   # Symbolic name, meaning all available interfaces
-#HOST = '128.250.66.5' 
 HOST = '128.250.106.25' 
 PORT = 5002         # Arbitrary non-privileged port
 
@@ -80,8 +79,10 @@ def do_test(data, conn):
         exec(data["data"], p1_module.__dict__)
         exec(data["data2"], p2_module.__dict__)
         result = g.run_game(p1_module.Player(), p2_module.Player())
+        if len(result) == 2:
+            raise Exception("Player {} failed: {}".format(result[0], result[1]))
     except Exception as msg:
-        conn.send("ERR: couldn't run one of 'data' or 'data2' for TEST: {}\n".format(msg).encode('utf-8'))
+        conn.send("ERR: couldn't run game for TEST: {}\n".format(msg).encode('utf-8'))
     else:
         conn.send("SUCCESS {}\n".format(json.dumps(result)).encode('utf-8'))
 
@@ -116,6 +117,34 @@ def add_player(d):
     print("ADDED {}{}".format(d["syn"], d["name"]))
     return("SUCCESS\n".encode('utf-8'))
 
+def delete_player(d):
+    """ d = {"name":..., "syn":...}
+        Returns a message to send to client.
+        Assumes players is locked
+    """
+    if "name" not in d or "syn" not in d:
+        return "ERR: missing name or syn in DEL\n".encode('utf-8')
+
+    global players
+    names = [p[PLAYER_TUPLE_NAME] for p in players]
+    if d["name"] in names:
+        print("Deleting {}".format(d["name"]))
+        i = names.index(d["name"]) 
+        players.pop(i)
+
+        fname = "{}/{}_{}.py".format(SDIR, d["name"], d["syn"])
+        try:
+            os.remove(fname)
+        except OSError:
+            msg = "ERR: couldn't delete file\n".encode('utf-8')
+        else:
+            msg = "SUCCESS\n".encode('utf-8')
+            print('DELETED {} {}'.format(d["name"], d["syn"]))
+    else:
+        msg = "ERR: name {} doesn't exist\n".format(d["name"]).encode('utf-8')
+
+    return msg
+
 def clientthread(conn):
     """Loop reading the code then close.
        If name does not exist for ADD, use syndicate number.
@@ -136,24 +165,13 @@ def clientthread(conn):
                 msg = add_player(d)
                 conn.send(msg)
             elif d["cmd"] == "DEL":
+                print("DELETE command")
                 if "name" not in d:
                     conn.send("ERR: Missing name in {} \n".format(data).encode('utf-8'))
                 else:
                     players_lock.acquire()
-                    names = [p[PLAYER_TUPLE_NAME] for p in players]
-                    if d["name"] in names:
-                        i = names.index(d["name"]) 
-                        players.pop(i)
-                        fname = "{}/{}_{}.py".format(SDIR, d["name"], d["syn"])
-                        try:
-                            os.remove(fname)
-                        except OSError:
-                            conn.send("ERR: couldn't delete file\n".encode('utf-8'))
-                        else:
-                            conn.send("SUCCESS\n".encode('utf-8'))
-                            print('DELETED {} {}'.format(d["name"], d["syn"]))
-                    else:
-                        conn.send("ERR: name {} doesn't exist\n".format(data).encode('utf-8'))
+                    msg = delete_player(d)
+                    conn.send(msg)
                     players_lock.release()
             elif d["cmd"] == "TEST":
                 res = do_test(d, conn)
@@ -169,6 +187,7 @@ def check_all_on_score_board(score_board):
         Note: may change score_board!
         Assumes players is locked.
     """
+    global players
     for p in players:
         k = (p[PLAYER_TUPLE_NAME], p[PLAYER_TUPLE_SYN]) 
         if k not in score_board:
@@ -182,6 +201,7 @@ def check_no_extras_on_score_board(score_board):
         Note: may change score_board!
         Assumes players is locked.
     """
+    global players
     to_remove = []
     for k in score_board:
         if not any((p[PLAYER_TUPLE_NAME], p[PLAYER_TUPLE_SYN]) == k for p in players):
@@ -198,9 +218,10 @@ def choose_game(score_board):
                (None,None,None,None) if no game available
         Assumes players is locked.
     """
+    global players
     if len(players) < 2:
         return (None, None, None, None)
-    """
+
     k1 = (players[0][PLAYER_TUPLE_NAME], players[0][PLAYER_TUPLE_SYN])
     k2 = (players[1][PLAYER_TUPLE_NAME], players[1][PLAYER_TUPLE_SYN])
     min_num_games = sum([score_board[k1][k2][i][0][0] for i in [0,1,2]])
@@ -215,6 +236,7 @@ def choose_game(score_board):
                             min_num_games = s
                             min_keys = (k1, k2, index1, index2)
     return min_keys
+
     """
     p1 = random.randint(0, len(players)-1)
     p2 = random.randint(0, len(players)-1)
@@ -223,6 +245,7 @@ def choose_game(score_board):
     k1 = (players[p1][PLAYER_TUPLE_NAME], players[p1][PLAYER_TUPLE_SYN])
     k2 = (players[p2][PLAYER_TUPLE_NAME], players[p2][PLAYER_TUPLE_SYN])
     return (k1, k2, v1, v2)
+    """
 
 def print_score_board(score_board):
     """Pretty cross table of round robin in order of total wins.
@@ -346,25 +369,37 @@ def run_games():
                 if g:
                     result = g.run_game(p1_module.Player(), p2_module.Player())
                     print(result)
-                    if result[-2] == 1:
-                        score_board[k1][k2][0][vic_type_index1][vic_type_index2] += 1  # win for k1
-                        score_board[k2][k1][1][vic_type_index2][vic_type_index1] += 1  # loss for k2
-                    elif result[-2] == 2:                      
-                        score_board[k1][k2][1][vic_type_index1][vic_type_index2] += 1  # loss for k1
-                        score_board[k2][k1][0][vic_type_index2][vic_type_index1] += 1  # win for k2
-                    else:                                      
-                        score_board[k1][k2][2][vic_type_index1][vic_type_index2] += 1  # draw for k1
-                        score_board[k2][k1][2][vic_type_index2][vic_type_index1] += 1  # draw for k2
+                
+                    if len(result) == 2:
+                        if result[0] == 1:
+                           players_lock.acquire()
+                           msg = delete_player({"name": k1[0], "syn": k1[1]})
+                           players_lock.release()
+                        else: 
+                           players_lock.acquire()
+                           msg = delete_player({"name": k2[0], "syn": k2[1]})
+                           players_lock.release()
+                        print(msg)
+                    else:
+                        if result[-2] == 1:
+                            score_board[k1][k2][0][vic_type_index1][vic_type_index2] += 1  # win for k1
+                            score_board[k2][k1][1][vic_type_index2][vic_type_index1] += 1  # loss for k2
+                        elif result[-2] == 2:                      
+                            score_board[k1][k2][1][vic_type_index1][vic_type_index2] += 1  # loss for k1
+                            score_board[k2][k1][0][vic_type_index2][vic_type_index1] += 1  # win for k2
+                        else:                                      
+                            score_board[k1][k2][2][vic_type_index1][vic_type_index2] += 1  # draw for k1
+                            score_board[k2][k1][2][vic_type_index2][vic_type_index1] += 1  # draw for k2
             except Exception as msg:
                 print("Exception when trying to run a game")
                 print(msg)
        
         try:
-            players_lock.release()
+            players_lock.release()   # safety unlock
         except Exception:
             pass
 
-        time.sleep(0.3)
+        time.sleep(0.2)
 
 def start_server():
         # open the socket
