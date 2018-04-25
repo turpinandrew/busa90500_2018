@@ -29,12 +29,14 @@ import random
 import numpy as np
 import yapf
 import os
+from datetime import datetime
  
 #HOST = 'localhost'   # Symbolic name, meaning all available interfaces
 HOST = '128.250.106.25' 
 PORT = 5002         # Arbitrary non-privileged port
 
 SDIR = "mbusa"
+E_FILE = "e.html"
 
     # list of current players and their scripts: tuple (name, syn, script, wins, loses)
 players = []
@@ -372,13 +374,15 @@ def run_games():
                 
                     if len(result) == 2:
                         if result[0] == 1:
-                           players_lock.acquire()
-                           msg = delete_player({"name": k1[0], "syn": k1[1]})
-                           players_lock.release()
+                            players_lock.acquire()
+                            msg = delete_player({"name": k1[0], "syn": k1[1]}) + "\n" + result[1]
+                            players_lock.release()
                         else: 
-                           players_lock.acquire()
-                           msg = delete_player({"name": k2[0], "syn": k2[1]})
-                           players_lock.release()
+                            players_lock.acquire()
+                            msg = delete_player({"name": k2[0], "syn": k2[1]}) + "\n" + result[1]
+                            players_lock.release()
+                        with open(E_FILE, "a") as f:
+                            f.write("<tr><td>{}</td><td>{}</td></tr>".format(msg, str(datetime.now())))
                         print(msg)
                     else:
                         if result[-2] == 1:
