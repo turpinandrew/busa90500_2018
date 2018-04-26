@@ -372,19 +372,26 @@ def run_games():
                     result = g.run_game(p1_module.Player(), p2_module.Player())
                     print(result)
                 
-                    if len(result) == 2:
+                    if len(result) == 2 and result[0] > 0:
                         if result[0] == 1:
                             players_lock.acquire()
-                            msg = delete_player({"name": k1[0], "syn": k1[1]}) + "\n" + result[1]
+                            msg = delete_player({"name": k1[0], "syn": k1[1]})
                             players_lock.release()
-                        else: 
+                        elif result[0] == 2: 
                             players_lock.acquire()
-                            msg = delete_player({"name": k2[0], "syn": k2[1]}) + "\n" + result[1]
+                            msg = delete_player({"name": k2[0], "syn": k2[1]})
                             players_lock.release()
+
                         with open(E_FILE, "a") as f:
-                            f.write("<tr><td>{}</td><td>{}</td></tr>".format(msg, str(datetime.now())))
+                            f.write("<tr><td>{}</td>".format(str(datetime.now())))
+                            f.write("<td>{}<br>".format(msg))
+                            f.write("{}</td>".format(result[1]))
+                            if result[0] == 1:
+                                f.write("<td>{}</td></tr>".format(Game.victory_types[vic_type_index1]))
+                            else:
+                                f.write("<td>{}</td></tr>".format(Game.victory_types[vic_type_index2]))
                         print(msg)
-                    else:
+                    elif len(result) > 2:
                         if result[-2] == 1:
                             score_board[k1][k2][0][vic_type_index1][vic_type_index2] += 1  # win for k1
                             score_board[k2][k1][1][vic_type_index2][vic_type_index1] += 1  # loss for k2

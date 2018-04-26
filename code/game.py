@@ -8,6 +8,7 @@ import random
 from scipy import stats 
 import numpy as np
 from collections import defaultdict
+import time
 
 class Game:
     names = [ "Amy", "Andrew", "Angela", "Bernie", "Biying", "Bushra",
@@ -25,6 +26,8 @@ class Game:
 	      "Zichen"]
 
     victory_types = ['Max', 'Min', 'Linear', "Quadratic", "ZeroM", "SumNeg", "SumPos"]
+
+    TIME_OUT = 10  # seconds
 
     def __init__(self, num_rounds=10, num_cols=5, vic_type1=None, vic_type2=None, same_col=False):
         """ Randomly choose num_cols column names and the two 
@@ -110,9 +113,13 @@ class Game:
            (player number, exception message)  (not list of 5 things)
         """
         message = ""
+        start_time = time.time()
         could_win = [True, True]  # can each player win?
         data = {k:[0.0] for k in self.col_names}
         for rnd in range(self.num_rounds):
+            if time.time() - start_time > Game.TIME_OUT:
+                return (0, "Game timed out")
+
             try:
                 p1_row = p1.take_turn(data, (self.vic_types[0], self.vic_cols[0]))
             except Exception as msg:
