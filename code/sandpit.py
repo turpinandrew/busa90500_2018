@@ -375,12 +375,14 @@ def run_games():
                     if len(result) == 2:
                         if result[0] == 1:
                             players_lock.acquire()
-                            msg = delete_player({"name": k1[0], "syn": k1[1]})
+                            _ = delete_player({"name": k1[0], "syn": k1[1]})
                             players_lock.release()
+                            msg = k1
                         elif result[0] == 2: 
                             players_lock.acquire()
-                            msg = delete_player({"name": k2[0], "syn": k2[1]})
+                            _ = delete_player({"name": k2[0], "syn": k2[1]})
                             players_lock.release()
+                            msg = k2
 
                         with open(E_FILE, "a") as f:
                             f.write("<tr><td>{}</td>".format(str(datetime.now())))

@@ -8,7 +8,7 @@ import random
 from scipy import stats 
 import numpy as np
 from collections import defaultdict
-import time
+import threading
 
 class Game:
     names = [ "Amy", "Andrew", "Angela", "Bernie", "Biying", "Bushra",
@@ -27,7 +27,7 @@ class Game:
 
     victory_types = ['Max', 'Min', 'Linear', "Quadratic", "ZeroM", "SumNeg", "SumPos"]
 
-    TIME_OUT = 10  # seconds
+    TIME = 2   # seconds for one turn
 
     def __init__(self, num_rounds=10, num_cols=5, vic_type1=None, vic_type2=None, same_col=False):
         """ Randomly choose num_cols column names and the two 
@@ -105,6 +105,25 @@ class Game:
         else:
             raise ValueError('Unknown victory type in Game.check_condition().')
 
+    def timeout(func, args=(), kwargs={}, duration=TIME, default=None):
+        '''This function will spwan a thread and run the given function using the args, kwargs and 
+        return the given default value if the duration is exceeded 
+        Taken from: http://code.activestate.com/recipes/473878/
+        ''' 
+        class InterruptableThread(threading.Thread):
+            def __init__(self):
+                threading.Thread.__init__(self)
+                self.result = default
+            def run(self):
+                try:
+                    self.result = func(*args, **kwargs)
+                except:
+                    self.result = default
+        it = InterruptableThread()
+        it.start()
+        it.join(duration)
+        return it.result   
+
     def run_game(self, p1, p2):
         """Run a game of p1 vs p2.
            Return lots of stuff... 0 for draw, or 1 or 2 for winner.
@@ -116,22 +135,19 @@ class Game:
         could_win = [True, True]  # can each player win?
         data = {k:[0.0] for k in self.col_names}
         for rnd in range(self.num_rounds):
-
             try:
-                start_time = time.time()
-                p1_row = p1.take_turn(data, (self.vic_types[0], self.vic_cols[0]))
-                if time.time() - start_time > Game.TIME_OUT:
-                    return (1, "Player 1 timed out")
+                p1_row = Game.timeout(p1.take_turn, (data, (self.vic_types[0], self.vic_cols[0])))
             except Exception as msg:
                 return (1, msg)
+            if p1_row is None:
+                return (1, "Player 1 timed out")
 
             try:
-                start_time = time.time()
-                p2_row = p2.take_turn(data, (self.vic_types[1], self.vic_cols[1]))
-                if time.time() - start_time > Game.TIME_OUT:
-                    return (2, "Player 2 timed out")
+                p2_row = Game.timeout(p2.take_turn, (data, (self.vic_types[1], self.vic_cols[1])))
             except Exception as msg:
                 return (2, msg)
+            if p2_row is None:
+                return (2, "Player 2 timed out")
 
                 # append each row, looking for missing key or non-float value
             for p,row in [(0, p1_row), (1, p2_row)]:
