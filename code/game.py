@@ -113,20 +113,23 @@ class Game:
            (player number, exception message)  (not list of 5 things)
         """
         message = ""
-        start_time = time.time()
         could_win = [True, True]  # can each player win?
         data = {k:[0.0] for k in self.col_names}
         for rnd in range(self.num_rounds):
-            if time.time() - start_time > Game.TIME_OUT:
-                return (0, "Game timed out")
 
             try:
+                start_time = time.time()
                 p1_row = p1.take_turn(data, (self.vic_types[0], self.vic_cols[0]))
+                if time.time() - start_time > Game.TIME_OUT:
+                    return (1, "Player 1 timed out")
             except Exception as msg:
                 return (1, msg)
 
             try:
+                start_time = time.time()
                 p2_row = p2.take_turn(data, (self.vic_types[1], self.vic_cols[1]))
+                if time.time() - start_time > Game.TIME_OUT:
+                    return (2, "Player 2 timed out")
             except Exception as msg:
                 return (2, msg)
 

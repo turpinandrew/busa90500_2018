@@ -372,7 +372,7 @@ def run_games():
                     result = g.run_game(p1_module.Player(), p2_module.Player())
                     print(result)
                 
-                    if len(result) == 2 and result[0] > 0:
+                    if len(result) == 2:
                         if result[0] == 1:
                             players_lock.acquire()
                             msg = delete_player({"name": k1[0], "syn": k1[1]})
