@@ -27,7 +27,7 @@ class Game:
 
     victory_types = ['Max', 'Min', 'Linear', "Quadratic", "ZeroM", "SumNeg", "SumPos"]
 
-    TIME = 2   # seconds for one turn
+    TIME = 5   # seconds for one turn
 
     def __init__(self, num_rounds=10, num_cols=5, vic_type1=None, vic_type2=None, same_col=False):
         """ Randomly choose num_cols column names and the two 
