@@ -31,8 +31,8 @@ import yapf
 import os
 from datetime import datetime
  
-#HOST = 'localhost'   # Symbolic name, meaning all available interfaces
-HOST = '128.250.106.25' 
+HOST = 'localhost'   # Symbolic name, meaning all available interfaces
+#HOST = '128.250.106.25' 
 PORT = 5002         # Arbitrary non-privileged port
 
 SDIR = "mbusa"
@@ -102,9 +102,15 @@ def add_player(d):
     except ValueError:
         return("ERR: data['syn'] is not an integer\n".encode('utf-8'))
 
-    players_lock.acquire()
     if "name" not in d:
         d["name"] = d["syn"]
+
+    players_lock.acquire()
+
+    if any([d["name"] == n and d["syn"] == s for n,s,_,_,_ in players]):
+        players_lock.release()
+        return("ERR: Player already exists\n".encode('utf-8'))
+
     players.append((d["name"], d["syn"], d["data"], 0, 0)) 
     players_lock.release()
 

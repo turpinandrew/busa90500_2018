@@ -124,17 +124,6 @@ class Game:
         it.join(duration)
         return it.result   
 
-    def fiddled(before, data):
-    """Return True if there is any difference between the value[:-1] of after and the vlaue[] of before.
-       Both before and after are dictionary with list values.
-    """
-    if before.keys() != after.keys():
-        return True
-    for k in data:
-        if before[k] != after[k][:-1]:
-            return True
-    return False
-
     def run_game(self, p1, p2):
         """Run a game of p1 vs p2.
            Return lots of stuff... 0 for draw, or 1 or 2 for winner.
@@ -154,7 +143,7 @@ class Game:
             if p1_row is None:
                 return (1, "Player 1 timed out")
 
-            if fiddled(before, data):
+            if data != before:
                 return (1, "Player 1 altered previous rows in data on their turn.")
 
             before = data.copy()
@@ -164,7 +153,7 @@ class Game:
                 return (2, msg)
             if p2_row is None:
                 return (2, "Player 2 timed out")
-            if fiddled(before, data):
+            if data != before:
                 return (2, "Player 2 altered previous rows in data on their turn.")
 
                 # append each row, looking for missing key or non-float value
