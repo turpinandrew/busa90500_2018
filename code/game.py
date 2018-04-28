@@ -27,7 +27,7 @@ class Game:
 
     victory_types = ['Max', 'Min', 'Linear', "Quadratic", "ZeroM", "SumNeg", "SumPos"]
 
-    TIME = 5   # seconds for one turn
+    TIME = 10   # seconds for one turn
 
     def __init__(self, num_rounds=10, num_cols=5, vic_type1=None, vic_type2=None, same_col=False):
         """ Randomly choose num_cols column names and the two 
@@ -155,6 +155,9 @@ class Game:
                     if k not in row or not isinstance(row[k], float):
                         could_win[p] = False
                         message += "Player {} returned a row that was not valid.\n".format(p+1)
+                    elif row[k] > 1023 or row[k] < -1023:
+                        could_win[p] = False
+                        message += "Player {} returned a row that had a number out of range.\n".format(p+1)
                     else:
                         data[k].append(round(row[k],5))
 

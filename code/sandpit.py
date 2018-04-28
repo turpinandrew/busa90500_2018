@@ -385,7 +385,7 @@ def run_games():
                             msg = k2
 
                         with open(E_FILE, "a") as f:
-                            f.write("<tr><td>{}</td>".format(str(datetime.now())))
+                            f.write("\n<tr><td>{}</td>".format(str(datetime.now())))
                             f.write("<td>{}<br>".format(msg))
                             f.write("{}</td>".format(result[1]))
                             if result[0] == 1:
