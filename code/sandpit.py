@@ -31,8 +31,8 @@ import yapf
 import os
 from datetime import datetime
  
-HOST = 'localhost'   # Symbolic name, meaning all available interfaces
-#HOST = '128.250.106.25' 
+#HOST = 'localhost'   # Symbolic name, meaning all available interfaces
+HOST = '128.250.106.25' 
 PORT = 5002         # Arbitrary non-privileged port
 
 SDIR = "mbusa"
@@ -342,6 +342,13 @@ def print_leader_board(score_board):
         f.write("\n".join(s))
     #print("\n".join(s))
 
+def write_to_e(msg, player, action):
+    """all are strings. msg<br>player written to column 2, action to column 3
+    """
+    with open(E_FILE, "a") as f:
+        f.write("\n<tr><td>{}</td>".format(str(datetime.now())))
+        f.write("<td>{}{}</td>".format(msg, player))
+        f.write("<td>{}</td></tr>".format(action))
 
 def run_games():
     """Thread running to randomly choose pairs from players and 
@@ -375,40 +382,56 @@ def run_games():
                 players_lock.release()
                 g = Game(vic_type1=vic_type_index1, vic_type2=vic_type_index2)
                 if g:
-                    result = g.run_game(p1_module.Player(), p2_module.Player())
-                    print(result)
-                
-                    if len(result) == 2:
-                        if result[0] == 1:
-                            players_lock.acquire()
-                            _ = delete_player({"name": k1[0], "syn": k1[1]})
-                            players_lock.release()
-                            msg = k1
-                        elif result[0] == 2: 
-                            players_lock.acquire()
-                            _ = delete_player({"name": k2[0], "syn": k2[1]})
-                            players_lock.release()
-                            msg = k2
+                    players_exist = True
+                    try:
+                        pp = p1_module.Player()
+                    except AttributeError as msg:
+                        players_lock.acquire()
+                        print(delete_player({"name": k1[0], "syn": k1[1]}))
+                        players_lock.release()
+                        write_to_e("No Player class.", k1, "Not started")
+                        players_exist = False
 
-                        with open(E_FILE, "a") as f:
-                            f.write("\n<tr><td>{}</td>".format(str(datetime.now())))
-                            f.write("<td>{}<br>".format(msg))
-                            f.write("{}</td>".format(result[1]))
+                    try:
+                        pp = p2_module.Player()
+                    except AttributeError as msg:
+                        players_lock.acquire()
+                        print(delete_player({"name": k2[0], "syn": k2[1]}))
+                        players_lock.release()
+                        write_to_e("No Player class.", k2, "Not started")
+                        players_exist = False
+
+                    if players_exist:
+                        result = g.run_game(p1_module.Player(), p2_module.Player())
+                        print(result)
+                        
+                        if len(result) == 2:
                             if result[0] == 1:
-                                f.write("<td>{}</td></tr>".format(Game.victory_types[vic_type_index1]))
-                            else:
-                                f.write("<td>{}</td></tr>".format(Game.victory_types[vic_type_index2]))
-                        print(msg)
-                    elif len(result) > 2:
-                        if result[-2] == 1:
-                            score_board[k1][k2][0][vic_type_index1][vic_type_index2] += 1  # win for k1
-                            score_board[k2][k1][1][vic_type_index2][vic_type_index1] += 1  # loss for k2
-                        elif result[-2] == 2:                      
-                            score_board[k1][k2][1][vic_type_index1][vic_type_index2] += 1  # loss for k1
-                            score_board[k2][k1][0][vic_type_index2][vic_type_index1] += 1  # win for k2
-                        else:                                      
-                            score_board[k1][k2][2][vic_type_index1][vic_type_index2] += 1  # draw for k1
-                            score_board[k2][k1][2][vic_type_index2][vic_type_index1] += 1  # draw for k2
+                                players_lock.acquire()
+                                _ = delete_player({"name": k1[0], "syn": k1[1]})
+                                players_lock.release()
+                                msg = k1
+                            elif result[0] == 2: 
+                                players_lock.acquire()
+                                _ = delete_player({"name": k2[0], "syn": k2[1]})
+                                players_lock.release()
+                                msg = k2
+
+                                if result[0] == 1:
+                                    write_to_e(msg, result[1], Game.victory_types[vic_type_index1])
+                                else:
+                                    write_to_e(msg, result[1], Game.victory_types[vic_type_index2])
+                            print(msg)
+                        elif len(result) > 2:
+                            if result[-2] == 1:
+                                score_board[k1][k2][0][vic_type_index1][vic_type_index2] += 1  # win for k1
+                                score_board[k2][k1][1][vic_type_index2][vic_type_index1] += 1  # loss for k2
+                            elif result[-2] == 2:                      
+                                score_board[k1][k2][1][vic_type_index1][vic_type_index2] += 1  # loss for k1
+                                score_board[k2][k1][0][vic_type_index2][vic_type_index1] += 1  # win for k2
+                            else:                                      
+                                score_board[k1][k2][2][vic_type_index1][vic_type_index2] += 1  # draw for k1
+                                score_board[k2][k1][2][vic_type_index2][vic_type_index1] += 1  # draw for k2
             except Exception as msg:
                 print("Exception when trying to run a game")
                 print(msg)
