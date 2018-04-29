@@ -28,15 +28,18 @@ import time
 import random
 import numpy as np
 import yapf
-import os
+import os, shutil
 from datetime import datetime
  
-HOST = 'localhost'   # Symbolic name, meaning all available interfaces
-#HOST = '128.250.106.25' 
+#HOST = 'localhost'   # Symbolic name, meaning all available interfaces
+HOST = '128.250.106.25' 
 PORT = 5002         # Arbitrary non-privileged port
 
 SDIR = "mbusa"
 E_FILE = "e.html"
+
+BDIR = "mbusa_backups"
+BACKUP_FILE_NUMBER = 1
 
     # list of current players and their scripts: tuple (name, syn, script, wins, loses)
 players = []
@@ -143,6 +146,7 @@ def delete_player(d):
 
         fname = "{}/{}_{}.py".format(SDIR, d["name"], d["syn"])
         try:
+            shutil.copy(fname, "{}/{}".format(BDIR, fname))
             os.remove(fname)
         except OSError:
             msg = "ERR: couldn't delete file\n".encode('utf-8')
