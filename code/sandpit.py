@@ -31,8 +31,8 @@ import yapf
 import os
 from datetime import datetime
  
-#HOST = 'localhost'   # Symbolic name, meaning all available interfaces
-HOST = '128.250.106.25' 
+HOST = 'localhost'   # Symbolic name, meaning all available interfaces
+#HOST = '128.250.106.25' 
 PORT = 5002         # Arbitrary non-privileged port
 
 SDIR = "mbusa"
@@ -93,7 +93,8 @@ def add_player(d):
         d - dictionary with "data" "syn" and "name"
     """
     try:
-        if int(d["syn"]) not in range(13):
+        d["syn"] = int(d["syn"])
+        if d["syn"] not in range(13):
             return("ERR: data['syn'] not in range [1,12]\n".encode('utf-8'))
         if "data" not in d:
             return("ERR: data does not have key 'data'\n".encode('utf-8'))
@@ -122,7 +123,7 @@ def add_player(d):
     except Exception:
         print("Cannot yapf {}\n".format(fname)) 
 
-    print("ADDED {}{}".format(d["syn"], d["name"]))
+    print("ADDED {1}_{0}".format(d["syn"], d["name"]))
     return("SUCCESS\n".encode('utf-8'))
 
 def delete_player(d):

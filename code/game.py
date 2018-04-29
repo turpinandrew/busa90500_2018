@@ -9,6 +9,7 @@ from scipy import stats
 import numpy as np
 from collections import defaultdict
 import threading
+from datetime import datetime
 
 class Game:
     names = [ "Amy", "Andrew", "Angela", "Bernie", "Biying", "Bushra",
@@ -107,22 +108,38 @@ class Game:
 
     def timeout(func, args=(), kwargs={}, duration=TIME, default=None):
         '''This function will spwan a thread and run the given function using the args, kwargs and 
-        return the given default value if the duration is exceeded 
         Taken from: http://code.activestate.com/recipes/473878/
+        return None if the duration is exceeded 
+               an object of type Exception if result of Exception when running func.
+               else result of func
+        NOTE: thus will be confusing if func returns a string.
         ''' 
+        class TimeOutMessage():
+            pass
+
         class InterruptableThread(threading.Thread):
-            def __init__(self):
+            def __init__(self, ready_event):
                 threading.Thread.__init__(self)
-                self.result = default
-            def run(self):
-                try:
+                self.ready_event = ready_event
+                self.result = TimeOutMessage()
+
+            def run(self):        
+                try:              
+                    self.ready_event.set()
                     self.result = func(*args, **kwargs)
-                except:
-                    self.result = default
-        it = InterruptableThread()
+                except Exception as msg: 
+                    print("HELLO!")
+                    self.result = msg
+
+        ready = threading.Event() 
+        it = InterruptableThread(ready)
         it.start()
+        ready.wait()
         it.join(duration)
-        return it.result   
+        if isinstance(it.result, TimeOutMessage):
+            return None 
+        else:
+            return it.result
 
     def run_game(self, p1, p2):
         """Run a game of p1 vs p2.
@@ -131,28 +148,24 @@ class Game:
            If one of the player's take_turn fails, return tuple of
            (player number, exception message)  (not list of 5 things)
         """
-        message = ""
         could_win = [True, True]  # can each player win?
         data = {k:[0.0] for k in self.col_names}
         for rnd in range(self.num_rounds):
             before = data.copy()
-            try:
-                p1_row = Game.timeout(p1.take_turn, (data, (self.vic_types[0], self.vic_cols[0])))
-            except Exception as msg:
-                return (1, msg)
+            p1_row = Game.timeout(p1.take_turn, (data, (self.vic_types[0], self.vic_cols[0])))
             if p1_row is None:
                 return (1, "Player 1 timed out")
-
+            elif isinstance(p1_row, Exception):
+                return (1, p1_row)
             if data != before:
                 return (1, "Player 1 altered previous rows in data on their turn.")
 
             before = data.copy()
-            try:
-                p2_row = Game.timeout(p2.take_turn, (data, (self.vic_types[1], self.vic_cols[1])))
-            except Exception as msg:
-                return (2, msg)
+            p2_row = Game.timeout(p2.take_turn, (data, (self.vic_types[1], self.vic_cols[1])))
             if p2_row is None:
                 return (2, "Player 2 timed out")
+            elif isinstance(p2_row, Exception):
+                return (2, p2_row)
             if data != before:
                 return (2, "Player 2 altered previous rows in data on their turn.")
 
@@ -161,15 +174,12 @@ class Game:
                 for k in data:
                     if k not in row or not isinstance(row[k], float):
                         could_win[p] = False
-                        message += "Player {} returned a row that was not valid.\n".format(p+1)
+                        return((p+1, "Player {} returned a row that was not valid (bad key or not float value).\n".format(p+1)))
                     elif row[k] > 1023 or row[k] < -1023:
                         could_win[p] = False
-                        message += "Player {} returned a row that had a number out of range.\n".format(p+1)
+                        return((p+1, "Player {} returned a row that had a number out of range.\n".format(p+1)))
                     else:
                         data[k].append(round(row[k],5))
-
-        if message == '':
-            message = 'gg\n'
 
         if all(could_win):
             wins = [self.check_condition(data, i) for i in range(2)]
@@ -188,5 +198,5 @@ class Game:
                 (str(p1), self.vic_types[0], self.vic_cols[0]), 
                 (str(p2), self.vic_types[1], self.vic_cols[1]), 
                 winner,
-                message
+                "gg"
                ]
