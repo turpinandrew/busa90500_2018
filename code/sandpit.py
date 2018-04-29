@@ -146,7 +146,7 @@ def delete_player(d):
 
         fname = "{}/{}_{}.py".format(SDIR, d["name"], d["syn"])
         try:
-            shutil.copy(fname, "{}/{}".format(BDIR, fname))
+            print("Copied: {} to {}".format(fname, shutil.copy(fname, BDIR)))
             os.remove(fname)
         except OSError:
             msg = "ERR: couldn't delete file\n".encode('utf-8')
