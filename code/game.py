@@ -12,7 +12,7 @@ import threading
 from datetime import datetime
 
 class Game:
-    names = [ "Amy", "Andrew", "Angela", "Bernie", "Biying", "Bushra",
+    names = set([ "Amy", "Andrew", "Angela", "Bernie", "Biying", "Bushra",
 	      "Carrie", "Claire", "Clarence", "Dane", "Dengke",
 	      "Erika", "Ernest", "Hong", "Hugh", "Inno", "Iris",
 	      "Jennifer", "Jiahui", "Jiaming", "Jianan", "Jianfeng",
@@ -24,7 +24,7 @@ class Game:
 	      "Venkat", "Viplav", "Vivienne", "Wendee", "Xiaoyu",
 	      "Xinrong", "Xue", "Yanjun", "Yan", "Yijin", "Yinghao",
 	      "Yingrang", "Yin", "Yiwen", "Yoke", "Yuan", "Yunong",
-	      "Zichen"]
+	      "Zichen"])
 
     victory_types = ['Max', 'Min', 'Linear', "Quadratic", "ZeroM", "SumNeg", "SumPos"]
 
@@ -128,7 +128,6 @@ class Game:
                     self.ready_event.set()
                     self.result = func(*args, **kwargs)
                 except Exception as msg: 
-                    print("HELLO!")
                     self.result = msg
 
         ready = threading.Event() 
